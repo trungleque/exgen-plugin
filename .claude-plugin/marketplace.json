@@ -1,0 +1,23 @@
+{
+  "name": "exgen",
+  "owner": {
+    "name": "trungleque"
+  },
+  "metadata": {
+    "description": "Marketplace for the exgen plugin: spec-driven planning tools that turn feature requirements into small, human-reviewable structured prompts before any code is generated",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "exgen",
+      "source": "./plugins/exgen",
+      "description": "Spec-driven planning toolkit: structured-prompt and user-story skills plus code-explorer and code-architect agents",
+      "version": "0.1.0",
+      "author": {
+        "name": "trungleque"
+      },
+      "license": "MIT",
+      "keywords": ["planning", "spdd", "structured-prompt", "spec-driven-development"]
+    }
+  ]
+}

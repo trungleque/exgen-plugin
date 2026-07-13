@@ -1,32 +1,50 @@
 # exgen
 
-A Claude Code plugin marketplace containing the `exgen` plugin, which bundles
-skills, commands, and agents so they can be installed on any machine with one
-command.
+A Claude Code plugin repository containing the `exgen` plugin: a spec-driven
+planning toolkit that turns feature requirements into small, human-reviewable
+structured prompts before any code is generated.
+
+The plugin bundles two skills and two agents:
+
+- **`structured-prompt`** (skill) — generate one concise, reviewable
+  structured prompt (a simplified SPDD / REASONS canvas) from a feature
+  description
+- **`user-story`** (skill) — the full planning workflow: codebase exploration,
+  clarifying questions, architecture options, task decomposition, then one
+  structured prompt per task
+- **`code-explorer`** (agent) — traces how existing features work, from entry
+  points to data storage
+- **`code-architect`** (agent) — designs implementation blueprints grounded in
+  the codebase's existing patterns
+
+See [`plugins/exgen/README.md`](plugins/exgen/README.md) for component details.
 
 ## Repository layout
 
 ```
 .
 ├── .claude-plugin/
-│   └── marketplace.json        # marketplace catalog — lists the exgen plugin
+│   └── marketplace.json             # marketplace catalog — lists the exgen plugin
+├── LICENSE                          # MIT
+├── README.md
 └── plugins/
     └── exgen/
         ├── .claude-plugin/
-        │   └── plugin.json     # plugin manifest (name, version, author)
-        ├── skills/              # model-invoked skills   -> /exgen:<skill-name>
-        │   └── example-skill/
-        │       └── SKILL.md
-        ├── commands/            # slash commands          -> /exgen:<command-name>
-        │   └── hello.md
-        ├── agents/               # subagents Claude can delegate to
-        │   └── example-agent.md
+        │   └── plugin.json              # plugin manifest (name, version, author)
+        ├── skills/                      # -> /exgen:<skill-name>
+        │   ├── structured-prompt/
+        │   │   └── SKILL.md             # one feature -> one reviewable prompt
+        │   └── user-story/
+        │       └── SKILL.md             # full story workflow -> prompt per task
+        ├── agents/                      # subagents Claude can delegate to
+        │   ├── code-explorer.md
+        │   └── code-architect.md
         └── README.md
 ```
 
-`.claude-plugin/` only ever contains manifest files (`plugin.json`,
-`marketplace.json`). Every other directory (`skills/`, `commands/`, `agents/`,
-`hooks/`, etc.) lives at the plugin root, one level up.
+`.claude-plugin/` only ever contains manifest files (`marketplace.json` at the
+repo root, `plugin.json` inside the plugin). Every other directory (`skills/`,
+`agents/`, `commands/`, `hooks/`, etc.) lives at the plugin root, one level up.
 
 ## Develop and test locally
 
@@ -36,10 +54,16 @@ Load the plugin directly from disk without installing it:
 claude --plugin-dir ./plugins/exgen
 ```
 
-Then try the bundled command:
+Then try the workflow skill:
 
 ```
-/exgen:hello Ada
+/exgen:user-story Add rate limiting to the password reset endpoint
+```
+
+or generate a single prompt directly:
+
+```
+/exgen:structured-prompt
 ```
 
 After editing any file, run `/reload-plugins` inside the session to pick up
@@ -58,11 +82,9 @@ Push this repository to GitHub, then anyone can register it as a marketplace
 and install the plugin from it:
 
 ```
-/plugin marketplace add <your-github-username>/exgen
+/plugin marketplace add trungleque/exgen-plugin
 /plugin install exgen@exgen
 ```
-
-(Replace `<your-github-username>/exgen` with wherever you push this repo.)
 
 Team members can also be auto-prompted to install it by adding to their
 project's `.claude/settings.json`:
@@ -71,7 +93,7 @@ project's `.claude/settings.json`:
 {
   "extraKnownMarketplaces": {
     "exgen": {
-      "source": { "source": "github", "repo": "<your-github-username>/exgen" }
+      "source": { "source": "github", "repo": "<your-github-username>/exgen-plugin" }
     }
   },
   "enabledPlugins": {
@@ -80,14 +102,9 @@ project's `.claude/settings.json`:
 }
 ```
 
-## Next steps
+## License
 
-- [ ] Replace the example skill, command, and agent in `plugins/exgen/` with
-      real functionality (see the checklist inside each file)
-- [ ] Set your name in `plugins/exgen/.claude-plugin/plugin.json` → `author`
-- [ ] Bump `version` in both `plugin.json` and `marketplace.json` on releases
-- [ ] Add a `LICENSE` file
-- [ ] Push to GitHub and run `claude plugin validate .` in CI
+[MIT](LICENSE) — free for everyone to use, modify, and share.
 
 Reference: [Create plugins](https://code.claude.com/docs/en/plugins) ·
 [Plugins reference](https://code.claude.com/docs/en/plugins-reference) ·
