@@ -93,7 +93,7 @@ project's `.claude/settings.json`:
 {
   "extraKnownMarketplaces": {
     "exgen": {
-      "source": { "source": "github", "repo": "<your-github-username>/exgen-plugin" }
+      "source": { "source": "github", "repo": "trungleque/exgen-plugin" }
     }
   },
   "enabledPlugins": {
