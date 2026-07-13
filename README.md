@@ -1,10 +1,11 @@
 # exgen
 
 A Claude Code plugin repository containing the `exgen` plugin: a spec-driven
-planning toolkit that turns feature requirements into small, human-reviewable
-structured prompts before any code is generated.
+development toolkit that turns feature requirements into small,
+human-reviewable structured prompts, implements them with strict TDD, and
+gates every task behind an independent review.
 
-The plugin bundles two skills and two agents:
+The plugin bundles four skills and two agents:
 
 - **`structured-prompt`** (skill) — generate one concise, reviewable
   structured prompt (a simplified SPDD / REASONS canvas) from a feature
@@ -12,6 +13,10 @@ The plugin bundles two skills and two agents:
 - **`user-story`** (skill) — the full planning workflow: codebase exploration,
   clarifying questions, architecture options, task decomposition, then one
   structured prompt per task
+- **`implementation`** (skill) — execute a structured prompt as tested code
+  using strict red-green-refactor TDD, one Operation at a time
+- **`review`** (skill) — independently verify an implementation against its
+  prompt; the mandatory gate that moves a prompt to `spdd/done/` on APPROVE
 - **`code-explorer`** (agent) — traces how existing features work, from entry
   points to data storage
 - **`code-architect`** (agent) — designs implementation blueprints grounded in
@@ -34,8 +39,14 @@ See [`plugins/exgen/README.md`](plugins/exgen/README.md) for component details.
         ├── skills/                      # -> /exgen:<skill-name>
         │   ├── structured-prompt/
         │   │   └── SKILL.md             # one feature -> one reviewable prompt
-        │   └── user-story/
-        │       └── SKILL.md             # full story workflow -> prompt per task
+        │   ├── user-story/
+        │   │   └── SKILL.md             # full story workflow -> prompt per task
+        │   ├── implementation/
+        │   │   ├── SKILL.md             # prompt -> tested code, strict TDD
+        │   │   └── references/
+        │   │       └── testing-anti-patterns.md
+        │   └── review/
+        │       └── SKILL.md             # verify code against prompt, gate to spdd/done/
         ├── agents/                      # subagents Claude can delegate to
         │   ├── code-explorer.md
         │   └── code-architect.md
