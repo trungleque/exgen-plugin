@@ -1,6 +1,6 @@
 # exgen
 
-A spec-driven development toolkit that turns feature requirements into small,
+A structured-prompt-driven development toolkit that turns feature requirements into small,
 human-reviewable structured prompts, implements them with strict TDD, and gates
 every task behind an independent review.
 
