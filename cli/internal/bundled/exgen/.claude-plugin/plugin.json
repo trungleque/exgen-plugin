@@ -1,0 +1,9 @@
+{
+  "name": "exgen",
+  "description": "Bundles exgen's skills, commands, and agents into one installable plugin",
+  "version": "0.1.1",
+  "author": {
+    "name": "trungleque"
+  },
+  "license": "MIT"
+}
