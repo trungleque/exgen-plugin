@@ -1,0 +1,167 @@
+package target
+
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+
+	"github.com/trungleque/exgen-plugin/cli/internal/install"
+	"github.com/trungleque/exgen-plugin/cli/internal/plugin"
+)
+
+func init() { register(codexTarget{}) }
+
+// codexTarget installs into Codex / ChatGPT.
+//
+// Skills follow the same SKILL.md convention as everywhere else, but subagents
+// are the one genuine format change in this tool: Codex defines them as TOML
+// with the system prompt carried in a developer_instructions key, not as
+// markdown with frontmatter. Codex has no slash commands, so commands become
+// skills.
+type codexTarget struct{}
+
+func (codexTarget) ID() string    { return "codex" }
+func (codexTarget) Title() string { return "Codex / ChatGPT" }
+func (codexTarget) Docs() string  { return "https://learn.chatgpt.com/docs/build-skills" }
+
+// codexSkillFields is the documented skill frontmatter.
+var codexSkillFields = []string{"name", "description"}
+
+func (t codexTarget) skillRoot(ctx Context) string {
+	return filepath.Join(ctx.Base(".agents", ".agents"), "skills")
+}
+
+func (t codexTarget) agentRoot(ctx Context) string {
+	return filepath.Join(ctx.Base(".codex", ".codex"), "agents")
+}
+
+func (t codexTarget) Support(ctx Context) []Support {
+	return []Support{
+		{plugin.KindSkill, true, Abbrev(filepath.Join(t.skillRoot(ctx), "<name>", "SKILL.md"), ctx.Home), ""},
+		{plugin.KindAgent, true, Abbrev(filepath.Join(t.agentRoot(ctx), "<name>.toml"), ctx.Home),
+			"markdown converted to TOML; body becomes developer_instructions"},
+		{plugin.KindCommand, false, Abbrev(filepath.Join(t.skillRoot(ctx), "<name>", "SKILL.md"), ctx.Home),
+			"installed as a skill — Codex has no slash commands"},
+	}
+}
+
+func (t codexTarget) Plan(p *plugin.Plugin, ctx Context) (*install.Plan, error) {
+	skillRoot, agentRoot := t.skillRoot(ctx), t.agentRoot(ctx)
+	pl := &install.Plan{
+		Target:      t.ID(),
+		TargetTitle: t.Title(),
+		Scope:       string(ctx.Scope),
+		Roots: []string{
+			Abbrev(skillRoot, ctx.Home),
+			Abbrev(agentRoot, ctx.Home),
+		},
+	}
+	if ctx.Scope == ScopeProject {
+		pl.Note(".agents/ is shared with Antigravity and Pi — installing those targets at project scope writes to the same skills directory")
+	}
+
+	if ctx.Wants(plugin.KindSkill) {
+		for _, s := range p.Skills {
+			t.planSkill(pl, skillRoot, s, plugin.KindSkill, "")
+		}
+	}
+	if ctx.Wants(plugin.KindCommand) {
+		for _, c := range p.Commands {
+			t.planSkill(pl, skillRoot, commandAsSkill(c), plugin.KindCommand, "command as skill")
+		}
+	}
+	if ctx.Wants(plugin.KindAgent) {
+		for _, a := range p.Agents {
+			t.planAgent(pl, agentRoot, a)
+		}
+	}
+	return pl, nil
+}
+
+func (t codexTarget) planSkill(pl *install.Plan, root string, s plugin.Skill, kind plugin.Kind, transform string) {
+	dir := filepath.Join(root, s.Name)
+	data, dropped := skillDoc(s, codexSkillFields)
+
+	var notes []string
+	if note := noteDropped("frontmatter", dropped); note != "" {
+		notes = append(notes, note)
+	}
+	if transform != "" {
+		notes = append(notes, "Codex has no slash commands; the command is discoverable as a skill instead")
+	}
+	if s.Frontmatter.IsTrue("disable-model-invocation") {
+		notes = append(notes, "Codex has no equivalent of disable-model-invocation — this skill can be selected by the model")
+	}
+
+	pl.Add(install.Action{
+		Path:      filepath.Join(dir, "SKILL.md"),
+		Data:      data,
+		Kind:      kind,
+		Name:      s.Name,
+		Transform: transform,
+		Notes:     notes,
+	})
+	for _, f := range s.Files {
+		pl.Add(install.Action{
+			Path: filepath.Join(dir, filepath.FromSlash(f.RelPath)),
+			Data: f.Data,
+			Kind: kind,
+			Name: s.Name,
+			Role: f.RelPath,
+		})
+	}
+}
+
+func (t codexTarget) planAgent(pl *install.Plan, root string, a plugin.Agent) {
+	notes := []string{"markdown frontmatter converted to TOML; the prompt body is now developer_instructions"}
+
+	fm := a.Frontmatter.Clone()
+	if _, ok := fm.Get("tools"); ok {
+		notes = append(notes, "tool allowlist dropped — a Codex agent file has no tools key")
+	}
+	if model, ok := fm.Get("model"); ok && !strings.Contains(model, "/") {
+		notes = append(notes, fmt.Sprintf("model %q is a Claude Code alias and has no Codex equivalent; omitted", model))
+	}
+
+	desc := a.Description
+	if desc == "" {
+		desc = fmt.Sprintf("The %s role.", a.Name)
+	}
+
+	pl.Add(install.Action{
+		Path:      filepath.Join(root, a.Name+".toml"),
+		Data:      codexAgentTOML(a.Name, desc, a.Body),
+		Kind:      plugin.KindAgent,
+		Name:      a.Name,
+		Transform: "markdown → TOML",
+		Notes:     notes,
+	})
+}
+
+// codexAgentTOML renders a Codex custom agent file.
+//
+// developer_instructions is written as a multi-line basic string so the prompt
+// stays readable on disk; TOML processes escapes inside those, so backslashes
+// and any literal triple quote have to be escaped.
+func codexAgentTOML(name, description, body string) []byte {
+	var b strings.Builder
+	b.WriteString("# Generated by exgen from a Claude Code subagent definition.\n\n")
+	b.WriteString("name = " + tomlBasic(name) + "\n")
+	b.WriteString("description = " + tomlBasic(description) + "\n")
+	b.WriteString("developer_instructions = " + tomlMultiline(body) + "\n")
+	return []byte(b.String())
+}
+
+func tomlBasic(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`, "\t", `\t`, "\r", `\r`)
+	return `"` + r.Replace(s) + `"`
+}
+
+func tomlMultiline(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"""`, `\"\"\"`)
+	s = strings.TrimRight(s, "\n")
+	// A newline directly after the opening delimiter is trimmed by TOML, so
+	// this formatting costs nothing in the parsed value.
+	return "\"\"\"\n" + s + "\n\"\"\""
+}

@@ -1,0 +1,8 @@
+CLAUDE.md
+
+# Anchored to the repo root on purpose: an unanchored `.claude-plugin` also
+# matches cli/internal/bundled/exgen/.claude-plugin/, which would drop the
+# embedded plugin's manifest from the commit and ship a binary that cannot
+# read its own name or version.
+/.claude
+/.claude-plugin
