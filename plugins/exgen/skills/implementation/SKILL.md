@@ -12,7 +12,7 @@ Development is strict TDD: no production code without a failing test first.
 
 ## Reference file
 
-**`references/testing-anti-patterns.md`** — read it before writing your first test, and re-check it any time you are about to add a mock or feel tempted to add a test-only method to production code. Its gate functions are part of this workflow, not optional advice.
+**`references/testing-anti-patterns.md`** — read it only when creating mocks, stubs, spies, or test doubles, or if tempted to add test-only methods to production code. Do not load it for pure logic or mock-free unit tests. When test doubles or isolation are needed, its gate functions are mandatory.
 
 ## Workflow
 
@@ -51,7 +51,7 @@ Take Operations strictly in their numbered order. For each:
 
 Rules that hold throughout the loop:
 - **Scope Out is a wall.** If an Operation seems to need something Scope Out excludes, that's a step-2-style contradiction — stop and raise it.
-- **Mocks follow the gate functions** in the anti-patterns reference: understand side effects before mocking, mock at the lowest level that isolates the slow/external part, mirror real data structures completely, and never assert on a mock's existence.
+- **Mocks follow the gate functions** in the anti-patterns reference (`references/testing-anti-patterns.md` — read this if adding mocks or test doubles): understand side effects before mocking, mock at the lowest level that isolates the slow/external part, mirror real data structures completely, and never assert on a mock's existence.
 - **No test-only methods in production classes.** Cleanup helpers live in test utilities.
 - Safeguard tests are written at whichever Operation makes them testable — do not defer them all to the end.
 
